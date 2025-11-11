@@ -7,3 +7,4 @@ alembic         # 用于数据库迁移
 python-jose[cryptography] # (可选) 用于未来的JWT用户认证
 passlib[bcrypt]         # (可选) 用于密码哈希
 pydantic-settings
+slowapi
