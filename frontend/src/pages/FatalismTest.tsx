@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { ApiQuestion, ApiTestResponse } from "@/data/questions";
 import { Smile, ArrowLeft, Loader2, Home, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/config/api";
 
 interface Answer {
     question_id: number;
@@ -69,7 +70,7 @@ export default function FatalismTest() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            const response = await fetch("http://192.168.1.244:8002/api/v1/tests/mfsg");
+            const response = await fetch(`${API_BASE_URL}/tests/mfsg`);
             if (!response.ok) throw new Error("获取题目失败");
 
             const data: ApiTestResponse = await response.json();
@@ -131,7 +132,7 @@ export default function FatalismTest() {
 
     const submitAnswers = async (finalAnswers: Answer[]) => {
         try {
-            const response = await fetch(`http://192.168.1.244:8002/api/v1/tests/${testId}/submit`, {
+            const response = await fetch(`${API_BASE_URL}/tests/${testId}/submit`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

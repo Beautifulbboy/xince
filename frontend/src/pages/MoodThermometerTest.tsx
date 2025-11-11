@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { ApiQuestion, ApiTestResponse } from "@/data/questions";
 import { Heart, ArrowLeft, Loader2, Home, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/config/api";
 
 interface Answer {
   question_id: number;
@@ -74,7 +75,7 @@ const MoodThermometerTest = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.1.244:8002/api/v1/tests/bsrs5");
+      const response = await fetch(`${API_BASE_URL}/tests/bsrs5`);
       if (!response.ok) throw new Error("获取题目失败");
 
       const data: ApiTestResponse = await response.json();
@@ -140,7 +141,7 @@ const MoodThermometerTest = () => {
 
   const submitAnswers = async (finalAnswers: Answer[]) => {
     try {
-      const response = await fetch(`http://192.168.1.244:8002/api/v1/tests/${testId}/submit`, {
+      const response = await fetch(`${API_BASE_URL}/tests/${testId}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

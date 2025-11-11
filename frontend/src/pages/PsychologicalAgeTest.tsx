@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { calculateAgeRange, ApiQuestion, ApiTestResponse } from "@/data/questions";
 import { Brain, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/config/api";
 
 interface Answer {
   question_id: number;
@@ -30,7 +31,7 @@ const Index = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.1.244:8002/api/v1/tests/psychological_age");
+      const response = await fetch(`${API_BASE_URL}/tests/psychological_age`);
       if (!response.ok) throw new Error("获取题目失败");
       
       const data: ApiTestResponse = await response.json();
@@ -97,7 +98,7 @@ const Index = () => {
 
   const submitAnswers = async (finalAnswers: Answer[]) => {
     try {
-      const response = await fetch(`http://192.168.1.244:8002/api/v1/tests/${testId}/submit`, {
+      const response = await fetch(`${API_BASE_URL}/tests/${testId}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

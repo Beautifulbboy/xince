@@ -6,6 +6,7 @@ import { QuestionCard } from "@/components/QuestionCard";
 import { ApiQuestion } from "@/data/questions";
 import { ArrowLeft, Brain, Home, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/config/api";
 
 interface Answer {
     question_id: number;
@@ -129,7 +130,7 @@ export default function MBTITest() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            const response = await fetch("http://192.168.1.244:8002/api/v1/tests/mbti?include_scores=true");
+            const response = await fetch(`${API_BASE_URL}/tests/mbti?include_scores=true`);
             if (!response.ok) throw new Error("Failed to fetch questions");
             const data = await response.json();
 
@@ -199,7 +200,7 @@ export default function MBTITest() {
 
     const submitAnswers = async (finalAnswers: Answer[]) => {
         try {
-            await fetch(`http://192.168.1.244:8002/api/v1/tests/${testId}/submit`, {
+            await fetch(`${API_BASE_URL}/tests/${testId}/submit`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
