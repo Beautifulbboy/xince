@@ -167,7 +167,6 @@ export default function MBTITest() {
     const handleAnswer = async (optionId: number) => {
         const currentQuestion = questions[currentQuestionIndex];
         const selectedOption = currentQuestion.options.find(opt => opt.id === optionId);
-        console.log('selectoption&score:',selectedOption,selectedOption.score)
         // 根据optionId计分：E=1, I=2, N=3, S=4, F=5, T=6, J=7, P=8
         const scoreMap: Record<number, string> = {
             1: 'E', 2: 'I', 3: 'N', 4: 'S', 5: 'F', 6: 'T', 7: 'J', 8: 'P'
