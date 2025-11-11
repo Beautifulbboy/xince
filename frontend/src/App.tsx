@@ -9,6 +9,7 @@ import PsychologicalAgeTest from "./pages/PsychologicalAgeTest";
 import MoodThermometerTest from "./pages/MoodThermometerTest";
 import FatalismTest from "./pages/FatalismTest";
 import MBTITest from "./pages/MBTITest";
+import JealousyTest from "./pages/JealousyTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/test/mood-thermometer" element={<MoodThermometerTest />} />
           <Route path="/test/fatalism" element={<FatalismTest />} />
           <Route path="/test/mbti" element={<MBTITest />} />
+          <Route path="/test/jealousy" element={<JealousyTest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

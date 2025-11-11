@@ -1,4 +1,4 @@
-import { Brain, Heart, Smile, Zap, Target, Users } from "lucide-react";
+import { Brain, Heart, Smile, Zap, Target, Users,HeartHandshake } from "lucide-react";
 
 export interface Test {
   id: string;
@@ -58,14 +58,14 @@ export const tests: Test[] = [
     color: "from-orange-500 to-red-500"
   },
   {
-    id: "career-orientation",
-    title: "职业倾向测试",
-    description: "发现最适合您的职业方向和发展路径",
-    icon: Target,
-    questionsCount: 35,
-    estimatedTime: "8-12分钟",
-    category: "职业规划",
-    path: "/test/career-orientation",
+    id: "jealousy",
+    title: "亲密守护情景量表",
+    description: "评估你在亲密关系中的边界敏感度与情绪反应模式",
+    icon: HeartHandshake,
+    questionsCount: 15,
+    estimatedTime: "5-8分钟",
+    category: "情感关系",
+    path: "/test/jealousy",
     color: "from-green-500 to-emerald-500"
   },
   {

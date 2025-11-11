@@ -76,7 +76,7 @@ const MoodThermometerTest = () => {
     try {
       const response = await fetch("http://192.168.1.244:8002/api/v1/tests/bsrs5");
       if (!response.ok) throw new Error("获取题目失败");
-      
+
       const data: ApiTestResponse = await response.json();
       setQuestions(data.questions.sort((a, b) => a.order_index - b.order_index));
       setTestId(data.id);
@@ -113,14 +113,14 @@ const MoodThermometerTest = () => {
       question_id: currentQuestion.id,
       selected_option_id: optionId,
     };
-    
+
     const newAnswers = [...answers, newAnswer];
     setAnswers(newAnswers);
 
     // 根据选项计算分数（0-4分）
     const optionIndex = currentQuestion.options.findIndex(opt => opt.id === optionId);
     const score = optionIndex >= 0 ? optionIndex : 0;
-    
+
     // 只有前5题计入总分
     if (currentQuestionIndex < 5) {
       setTotalScore(totalScore + score);
@@ -152,7 +152,7 @@ const MoodThermometerTest = () => {
       });
 
       if (!response.ok) throw new Error("提交答案失败");
-      
+
       toast({
         title: "成功",
         description: "测试结果已保存",
@@ -250,7 +250,7 @@ const MoodThermometerTest = () => {
   if (finished) {
     const result = getMoodResult(totalScore);
     const ResultIcon = result.icon;
-    
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--gradient-subtle)]">
         <div className="w-full max-w-2xl mx-auto space-y-6 animate-in fade-in-0 duration-700">
@@ -259,7 +259,7 @@ const MoodThermometerTest = () => {
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-500">
                 <Heart className="w-10 h-10 text-white" />
               </div>
-              
+
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold text-card-foreground">测试完成！</h2>
                 <p className="text-muted-foreground">感谢您完成全部5道题目</p>

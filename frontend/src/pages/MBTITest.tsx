@@ -136,7 +136,7 @@ export default function MBTITest() {
             const sortedQuestions = data.questions.sort((a: ApiQuestion, b: ApiQuestion) =>
                 a.order_index - b.order_index
             );
-            
+
             const qMap: Record<number, number> = {};
             sortedQuestions.forEach((q: ApiQuestion) => {
                 qMap[q.id] = q.order_index;
@@ -345,48 +345,6 @@ export default function MBTITest() {
                                 <p className="text-card-foreground/80 leading-relaxed whitespace-pre-line">
                                     {result.description}
                                 </p>
-                            </div>
-
-                            <div className="space-y-3 p-6 bg-secondary/30 rounded-lg">
-                                <h3 className="font-semibold text-lg text-card-foreground">您的偏好强度</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span>外向(E) vs 内向(I)</span>
-                                            <span className="font-semibold">{scores.E > scores.I ? 'E' : 'I'}</span>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            E: {scores.E} | I: {scores.I}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span>实际(S) vs 直觉(N)</span>
-                                            <span className="font-semibold">{scores.S > scores.N ? 'S' : 'N'}</span>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            S: {scores.S} | N: {scores.N}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span>思考(T) vs 感觉(F)</span>
-                                            <span className="font-semibold">{scores.T > scores.F ? 'T' : 'F'}</span>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            T: {scores.T} | F: {scores.F}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span>判断(J) vs 感知(P)</span>
-                                            <span className="font-semibold">{scores.J > scores.P ? 'J' : 'P'}</span>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            J: {scores.J} | P: {scores.P}
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             <div className="flex gap-4">
