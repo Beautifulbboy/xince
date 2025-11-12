@@ -4,8 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { tests } from "@/data/tests";
 import { ArrowRight, Brain } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { fetchPopularTests, type PopularTest } from '../api/popularTests';
 
 const Home = () => {
+  const [popularTests, setPopularTests] = useState<PopularTest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTests = async () => {
+      setIsLoading(true);
+      const data = await fetchPopularTests();
+      setPopularTests(data);
+      setIsLoading(false);
+    };
+    loadTests();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[var(--gradient-subtle)]">
       {/* Header */}
@@ -21,7 +36,7 @@ const Home = () => {
             </h1>
           </div>
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#tests" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/tests" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               全部测试
             </a>
             <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -72,7 +87,7 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tests.map((test, index) => {
+            {popularTests.map((test, index) => {
               const Icon = test.icon;
               return (
                 <Card

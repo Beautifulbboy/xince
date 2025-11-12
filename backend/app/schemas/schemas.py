@@ -132,3 +132,17 @@ class TestSession(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# ----------------------------------------
+# Popular Test Schemas
+# ----------------------------------------
+class PopularTest(BaseModel):
+    id: int               # 数据库中的 test ID
+    test_type: str        # 字符串 ID (例如 "mbti", "phq-9")
+    title: str
+    description: Optional[str] = None
+    session_count: int    # 该测试被完成的次数
+
+    class Config:
+        orm_mode = True

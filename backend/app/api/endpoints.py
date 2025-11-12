@@ -36,6 +36,17 @@ async def create_new_test(
     return db_test
 
 
+@router.get("/tests/popular", response_model=List[schemas.PopularTest])
+async def get_popular_tests(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取测试次数最多的前6个热门测试。
+    """
+    popular_tests = await test_service.get_popular_tests(db=db, limit=6)
+    return popular_tests
+
+
 @router.get("/tests/{test_type}", response_model=Union[schemas.Test, schemas.TestForTaking]) # [修改] 1. 更改 response_model
 async def get_test_for_taking(
     test_type: str, 

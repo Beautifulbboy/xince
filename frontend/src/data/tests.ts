@@ -79,4 +79,15 @@ export const tests: Test[] = [
     path: "/test/couple-relationship",
     color: "from-teal-500 to-cyan-500"
   },
+  {
+    id: "beck-hopelessness",
+    title: "贝克绝望量表",
+    description: "评估您近期对未来的希望感与信心水平",
+    icon: Heart,
+    questionsCount: 20,
+    estimatedTime: "3-5分钟",
+    category: "心理健康",
+    path: "/test/beck-hopelessness",
+    color: "from-indigo-500 to-purple-500"
+  },
 ];

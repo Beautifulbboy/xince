@@ -1,10 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from typing import Optional, Union  # [修改] 导入 Union
+from sqlalchemy import func, desc
+from typing import Optional, Union, List  # [修改] 导入 Union
 
 # 导入数据库模型
-from app.models.models import Test, Question, QuestionOption, TestResult
+from app.models.models import TestSession,Test, Question, QuestionOption, TestResult
 # 导入 Pydantic schemas
 from app.schemas import schemas
 
@@ -129,3 +130,51 @@ async def get_test_by_type(
             description=db_test.description,
             questions=questions_for_taking
         )
+    
+async def get_popular_tests(db: AsyncSession, limit: int = 6) -> List[schemas.PopularTest]:
+    """
+    获取测试次数最多的 N 个测试
+    """
+    
+    # 1. 创建一个子查询 (Subquery)
+    #    作用: 统计 test_sessions 表中每个 test_id 出现了多少次
+    session_counts_sq = (
+        select(
+            TestSession.test_id,
+            func.count(TestSession.id).label("session_count") # COUNT(id) AS session_count
+        )
+        .group_by(TestSession.test_id) # GROUP BY test_id
+        .subquery() # 转换成子查询
+    )
+
+    # 2. 创建主查询
+    #    作用: JOIN tests 表 和 上一步的统计结果
+    stmt = (
+        select(
+            Test.id,
+            Test.test_type,
+            Test.title,
+            Test.description,
+            session_counts_sq.c.session_count # 'c' 代表 'columns'
+        )
+        .join(
+            session_counts_sq, Test.id == session_counts_sq.c.test_id # JOIN ON tests.id = ...
+        )
+        .order_by(desc(session_counts_sq.c.session_count)) # ORDER BY ... DESC
+        .limit(limit) # LIMIT 6
+    )
+    
+    result = await db.execute(stmt)
+    
+    # 3. 将查询结果 (SQLAlchemy Rows) 转换为 Pydantic 模型
+    popular_tests = [
+        schemas.PopularTest(
+            id=row.id,
+            test_type=row.test_type,
+            title=row.title,
+            description=row.description,
+            session_count=row.session_count
+        ) for row in result.all() # .all() 是安全的，因为我们 limit 了 6 个
+    ]
+    
+    return popular_tests
