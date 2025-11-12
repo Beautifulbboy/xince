@@ -20,7 +20,7 @@ export const tests: Test[] = [
     icon: Brain,
     questionsCount: 30,
     estimatedTime: "5-8分钟",
-    category: "心理分析",
+    category: "趣味测试",
     path: "/test/psychological-age",
     color: "from-blue-500 to-cyan-500"
   },
@@ -69,14 +69,14 @@ export const tests: Test[] = [
     color: "from-green-500 to-emerald-500"
   },
   {
-    id: "social-anxiety",
-    title: "社交焦虑测试",
-    description: "了解您在社交场合中的舒适度和焦虑程度",
+    id: "couple-relationship",
+    title: "情侣关系问卷",
+    description: "评估您与配偶在信任、亲密与协作方面的关系质量",
     icon: Users,
-    questionsCount: 28,
-    estimatedTime: "6-8分钟",
-    category: "心理健康",
-    path: "/test/social-anxiety",
+    questionsCount: 14,
+    estimatedTime: "3-5分钟",
+    category: "情感关系",
+    path: "/test/couple-relationship",
     color: "from-teal-500 to-cyan-500"
   },
 ];
