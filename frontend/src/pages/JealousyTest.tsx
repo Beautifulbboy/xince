@@ -324,7 +324,7 @@ export default function JealousyTest() {
                             </div>
                             <div>
                                 <CardTitle className="text-3xl font-bold mb-2">
-                                    亲密守护情景量表
+                                    亲密守护情景量表 (LJSI)
                                 </CardTitle>
                                 <CardDescription className="text-base">
                                     Love-Jealousy Situations Index (LJSI)

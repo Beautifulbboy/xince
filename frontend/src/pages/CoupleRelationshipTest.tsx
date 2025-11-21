@@ -4,7 +4,7 @@ import { QuestionCard } from "@/components/QuestionCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApiQuestion, ApiTestResponse } from "@/data/questions";
-import { Heart, ArrowLeft, Loader2 } from "lucide-react";
+import { Users, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/config/api";
 
@@ -193,7 +193,7 @@ const CoupleRelationshipTest = () => {
                 <div className="w-full max-w-2xl text-center space-y-8 animate-in fade-in-0 duration-700">
                     <div className="space-y-4">
                         <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent shadow-[var(--shadow-soft)]">
-                            <Heart className="w-12 h-12 text-white" />
+                            <Users className="w-12 h-12 text-white" />
                         </div>
                         <h1 className="text-4xl md:text-5xl font-bold text-foreground">
                             情侣关系问卷
@@ -260,7 +260,7 @@ const CoupleRelationshipTest = () => {
                     <div className="space-y-6">
                         <div className="text-center space-y-4">
                             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent shadow-[var(--shadow-soft)]">
-                                <Heart className="w-10 h-10 text-white" />
+                                <Users className="w-10 h-10 text-white" />
                             </div>
                             <h2 className="text-3xl font-bold text-card-foreground">测试完成</h2>
                             <div className="space-y-2">

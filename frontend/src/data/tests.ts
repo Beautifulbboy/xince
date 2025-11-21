@@ -1,4 +1,4 @@
-import { Brain, Heart, Smile, Zap, Target, Users,HeartHandshake } from "lucide-react";
+import { Brain, Heart, Smile, Zap, Target, Users, HeartHandshake, HeartPulse } from "lucide-react";
 
 export interface Test {
   id: string;
@@ -26,7 +26,7 @@ export const tests: Test[] = [
   },
   {
     id: "mood-thermometer",
-    title: "心情温度计",
+    title: "心情温度计 (BSRS-5)",
     description: "简式健康量表(BSRS-5)，快速评估您的心理困扰程度",
     icon: Heart,
     questionsCount: 6,
@@ -37,7 +37,7 @@ export const tests: Test[] = [
   },
   {
     id: "fatalism",
-    title: "宿命观量表",
+    title: "宿命观量表 (MFSG)",
     description: "评估您对命运、运气和自我掌控的态度倾向",
     icon: Smile,
     questionsCount: 16,
@@ -59,14 +59,14 @@ export const tests: Test[] = [
   },
   {
     id: "jealousy",
-    title: "亲密守护情景量表",
+    title: "亲密守护情景量表 (LJSI)",
     description: "评估你在亲密关系中的边界敏感度与情绪反应模式",
     icon: HeartHandshake,
     questionsCount: 15,
     estimatedTime: "5-8分钟",
     category: "情感关系",
     path: "/test/jealousy",
-    color: "from-green-500 to-emerald-500"
+    color: "from-pink-500 to-orange-500"
   },
   {
     id: "couple-relationship",
@@ -81,7 +81,7 @@ export const tests: Test[] = [
   },
   {
     id: "beck-hopelessness",
-    title: "贝克绝望量表",
+    title: "贝克绝望量表 (BHS)",
     description: "评估您近期对未来的希望感与信心水平",
     icon: Heart,
     questionsCount: 20,
@@ -89,5 +89,16 @@ export const tests: Test[] = [
     category: "心理健康",
     path: "/test/beck-hopelessness",
     color: "from-indigo-500 to-purple-500"
+  },
+  {
+    id: "hpls",
+    title: "健康促进生活方式量表 (HPLP)",
+    description: "评估您在健康促进方面的行为特征",
+    icon: HeartPulse,
+    questionsCount: 40,
+    estimatedTime: "5-8分钟",
+    category: "心理健康",
+    path: "/test/hpls",
+    color: "from-green-500 to-emerald-500"
   },
 ];

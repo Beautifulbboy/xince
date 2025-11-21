@@ -229,7 +229,7 @@ const BeckHopelessnessTest = () => {
                                 返回首页
                             </Button>
                         </div>
-                        <CardTitle className="text-3xl text-center">贝克绝望量表</CardTitle>
+                        <CardTitle className="text-3xl text-center">贝克绝望量表 (BHS)</CardTitle>
                         <CardDescription className="text-center text-base">
                             评估您近期对未来的希望感与信心水平
                         </CardDescription>

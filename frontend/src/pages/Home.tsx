@@ -39,9 +39,9 @@ const Home = () => {
             <a href="/tests" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               全部测试
             </a>
-            <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            {/* <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               关于我们
-            </a>
+            </a> */}
           </nav>
         </div>
       </header>
