@@ -2,113 +2,135 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 
 # 导入数据库模型
-from app.models.models import Test, TestSession, UserAnswer, QuestionOption, TestResult
+from app.models.models import (
+    Test, TestSession, UserAnswer, QuestionOption, 
+    TestResult, TestSessionDimension
+)
 # 导入 Pydantic schemas
 from app.schemas import schemas
 
 # ---------------------------------------------------------------
-# [新增] 辅助函数 1: 你的新 MBTI 计分逻辑
+# [新增] HPLP 量表的计分“地图”
+# 键: 题号 (order_index), 值: 维度代码 (dimension_code)
 # ---------------------------------------------------------------
-async def _calculate_mbti_score(
+HPLP_DIMENSION_MAP: Dict[int, str] = {
+    1: "HR", 6: "HR", 12: "HR", 14: "HR", 19: "HR", 24: "HR", 28: "HR", 32: "HR", 35: "HR", 38: "HR", 40: "HR", # 健康责任
+    2: "PA", 8: "PA", 15: "PA", 21: "PA", 26: "PA", 31: "PA", 37: "PA", 39: "PA", # 体育活动
+    3: "N", 9: "N", 16: "N", 22: "N", 27: "N", 34: "N", # 营养
+    4: "IR", 10: "IR", 17: "IR", 23: "IR", 30: "IR", # 人际关系
+    5: "SM", 11: "SM", 18: "SM", 25: "SM", 33: "SM", # 压力管理
+    7: "SG", 13: "SG", 20: "SG", 29: "SG", 36: "SG"  # 精神成长
+}
+
+# ---------------------------------------------------------------
+# [新增] HPLP 专属计分函数
+# ---------------------------------------------------------------
+async def _calculate_hplp_results(
+    db: AsyncSession, 
+    test_id: int,
     options_from_db: List[QuestionOption]
-) -> Tuple[int, str]:
+) -> Tuple[int, str, List[TestSessionDimension]]:
     """
-    根据用户的答案计算 MBTI 4字母类型 和 唯一的数字分数。
-    返回 (total_score, type_code) e.g. (2111, "ISTJ")
+    专门为“健康促进生活方式量表”(HPLP) 计分。
     """
     
-    # 步骤 1：按维度统计
-    # 维度映射 (score_id -> 字母)
-    trait_map = {1: 'E', 2: 'I', 3: 'N', 4: 'S', 5: 'F', 6: 'T', 7: 'J', 8: 'P'}
-    
-    # 维度计数器
-    counts = {
-        'EI': {'E': 0, 'I': 0}, # 题 1-7
-        'SN': {'S': 0, 'N': 0}, # 题 8-14
-        'TF': {'T': 0, 'F': 0}, # 题 15-21
-        'JP': {'J': 0, 'P': 0}  # 题 22-28
+    # 1. 初始化分数
+    dim_scores: Dict[str, int] = {
+        "HR": 0, "PA": 0, "N": 0, "IR": 0, "SM": 0, "SG": 0
     }
+    total_score = 0
+    
+    # 2. 遍历用户选择的选项进行计分
+    for opt in options_from_db:
+        q_index = opt.question.order_index
+        score = opt.score
+        
+        # 累加总分
+        total_score += score 
+        
+        # 查找维度并累加
+        dim_code = HPLP_DIMENSION_MAP.get(q_index)
+        if dim_code in dim_scores:
+            dim_scores[dim_code] += score
+            
+    # 3. 从数据库加载此测试的 *所有* 维度规则
+    stmt_rules = select(TestResult).where(
+        TestResult.test_id == test_id,
+        TestResult.dimension_code.isnot(None) 
+    )
+    result_rules = await db.execute(stmt_rules)
+    dimension_rules = result_rules.scalars().all()
+
+    dimensions_to_create: List[TestSessionDimension] = []
+    
+    # 4. 匹配得分和规则
+    for dim_code, score in dim_scores.items():
+        found_rule_text = f"未找到 {dim_code} 的规则"
+        
+        for rule in dimension_rules:
+            if rule.dimension_code == dim_code:
+                if (rule.min_score <= score and 
+                   (rule.max_score is None or rule.max_score >= score)):
+                    if rule.description:
+                        # 使用 <SEP> 分隔标题和描述
+                        found_rule_text = f"{rule.result_range}<SEP>{rule.description}"
+                    else:
+                        found_rule_text = rule.result_range
+                    break 
+        
+        dimensions_to_create.append(
+            TestSessionDimension(
+                dimension_code=dim_code,
+                score=score,
+                result_range=found_rule_text
+            )
+        )
+
+    return total_score, "Processing...", dimensions_to_create
+
+
+# ---------------------------------------------------------------
+# 辅助函数 (MBTI / Sum)
+# ---------------------------------------------------------------
+async def _calculate_mbti_score(options_from_db: List[QuestionOption]) -> Tuple[int, str]:
+    trait_map = {1: 'E', 2: 'I', 3: 'N', 4: 'S', 5: 'F', 6: 'T', 7: 'J', 8: 'P'}
+    counts = {'EI': {'E': 0, 'I': 0}, 'SN': {'S': 0, 'N': 0}, 'TF': {'T': 0, 'F': 0}, 'JP': {'J': 0, 'P': 0}}
 
     for opt in options_from_db:
-        if not opt.question:
-            raise HTTPException(status_code=500, detail=f"数据错误: 选项 {opt.id} 没有关联的问题")
-
+        if not opt.question: continue
         order_idx = opt.question.order_index
-        trait_id = opt.score # 1-8
-        
-        trait_letter = trait_map.get(trait_id)
-        if not trait_letter:
-            continue # 忽略无效的 score_id
-
-        if 1 <= order_idx <= 7 and trait_letter in counts['EI']:
-            counts['EI'][trait_letter] += 1
-        elif 8 <= order_idx <= 14 and trait_letter in counts['SN']:
-            counts['SN'][trait_letter] += 1
-        elif 15 <= order_idx <= 21 and trait_letter in counts['TF']:
-            counts['TF'][trait_letter] += 1
-        elif 22 <= order_idx <= 28 and trait_letter in counts['JP']:
-            counts['JP'][trait_letter] += 1
-
-    # 确定最终类型
+        trait_letter = trait_map.get(opt.score)
+        if not trait_letter: continue
+        if 1 <= order_idx <= 7 and trait_letter in counts['EI']: counts['EI'][trait_letter] += 1
+        elif 8 <= order_idx <= 14 and trait_letter in counts['SN']: counts['SN'][trait_letter] += 1
+        elif 15 <= order_idx <= 21 and trait_letter in counts['TF']: counts['TF'][trait_letter] += 1
+        elif 22 <= order_idx <= 28 and trait_letter in counts['JP']: counts['JP'][trait_letter] += 1
     type_code = ""
     type_code += "I" if counts['EI']['I'] > counts['EI']['E'] else "E"
     type_code += "N" if counts['SN']['N'] > counts['SN']['S'] else "S"
     type_code += "T" if counts['TF']['T'] > counts['TF']['F'] else "F"
     type_code += "J" if counts['JP']['J'] > counts['JP']['P'] else "P"
-
-    # 步骤 2：将四字母类型转换为唯一的数字总分
-    score_encoding = {
-        'E': 1000, 'I': 2000,
-        'S': 100,  'N': 200,
-        'T': 10,   'F': 20,
-        'J': 1,    'P': 2
-    }
-
-    total_score = (
-        score_encoding[type_code[0]] +
-        score_encoding[type_code[1]] +
-        score_encoding[type_code[2]] +
-        score_encoding[type_code[3]]
-    )
-
-    # 步骤 3：返回唯一分数和类型代码
+    score_encoding = {'E': 1000, 'I': 2000, 'S': 100, 'N': 200, 'T': 10, 'F': 20, 'J': 1, 'P': 2}
+    total_score = sum(score_encoding[letter] for letter in type_code)
     return total_score, type_code
 
-# ---------------------------------------------------------------
-# [新增] 辅助函数 2: 原始的加总计分逻辑
-# ---------------------------------------------------------------
-async def _calculate_sum_score(
-    options_from_db: List[QuestionOption]
-) -> int:
-    """
-    计算所有选项分数的总和。
-    """
-    total_score = 0
-    for opt in options_from_db:
-        total_score += opt.score
-    return total_score
+async def _calculate_sum_score(options_from_db: List[QuestionOption]) -> int:
+    return sum(opt.score for opt in options_from_db)
 
 
 # ---------------------------------------------------------------
-# [修改] 核心函数：calculate_and_save_session
+# [核心] calculate_and_save_session
 # ---------------------------------------------------------------
 async def calculate_and_save_session(
     db: AsyncSession, 
     test_id: int, 
     submission: schemas.TestSubmission
 ) -> TestSession:
-    """
-    核心逻辑：
-    1. 检查测试类型 (test_type)
-    2. 根据类型分发到不同的计分函数
-    3. 根据计分结果查询 TestResult
-    4. 保存 Session 和 Answers
-    """
     
-    # --- 1. [新] 获取 Test 类型 ---
+    # --- 1. 获取 Test 信息 ---
     test_stmt = select(Test).where(Test.id == test_id)
     test_result = await db.execute(test_stmt)
     db_test = test_result.scalars().first()
@@ -116,14 +138,11 @@ async def calculate_and_save_session(
     if not db_test:
         raise HTTPException(status_code=404, detail="Test not found")
 
-    # --- 2. [通用] 准备数据 ---
-    
-    # 提取所有提交的 option ID
+    # --- 2. 准备数据 ---
     selected_option_ids = [ans.selected_option_id for ans in submission.answers]
     if not selected_option_ids:
         raise HTTPException(status_code=400, detail="No answers submitted")
 
-    # [通用] 准备要创建的 UserAnswer 数据库对象
     db_answers_to_create = [
         UserAnswer(
             question_id=ans.question_id,
@@ -131,86 +150,86 @@ async def calculate_and_save_session(
         ) for ans in submission.answers
     ]
     
-    # [通用] 一次性从数据库查询所有这些 option
-    # [重要] 我们使用 selectinload 预加载 Question 及其 order_index
-    # 这样 MBTI 逻辑才能工作
     stmt_scores = (
         select(QuestionOption)
         .where(QuestionOption.id.in_(selected_option_ids))
-        .options(selectinload(QuestionOption.question)) # 预加载问题信息
+        .options(selectinload(QuestionOption.question)) 
     )
     result_scores = await db.execute(stmt_scores)
     options_from_db = result_scores.scalars().all()
 
-    # 验证是否所有提交的 ID 都有效
     if len(options_from_db) != len(set(selected_option_ids)):
         raise HTTPException(status_code=400, detail="One or more selected options are invalid.")
 
-    # --- 3. [修改] 计分逻辑分发 ---
-    
+    # --- 3. 计分逻辑分发 ---
     total_score = 0
     result_text = "未定义的结果"
-    stmt_result = None # 用于查询 TestResult 的语句
-    
-    # [关键] 检查 test_type 并选择计分策略
-    # 你需要确保你的 MBTI 测试在创建时 test_type 设置为 "mbti"
+    stmt_result: Any = None 
+    dimensions_to_add: List[TestSessionDimension] = [] 
+
+    # [策略 A] MBTI
     if db_test.test_type == "mbti":
-        # 调用 MBTI 计分逻辑
         total_score, type_code = await _calculate_mbti_score(options_from_db)
-        
-        # MBTI 的结果查询是精确匹配
         stmt_result = select(TestResult).where(
             TestResult.test_id == test_id,
-            TestResult.min_score == total_score
+            TestResult.min_score == total_score,
+            TestResult.dimension_code.is_(None) 
         )
-        # 默认 result_text 是类型代码, e.g., "ISTJ"
-        # 稍后会被数据库中的 result_range (e.g., "学者型") 覆盖
-        result_text = type_code 
+        result_text = type_code
         
-    else:
-        # 默认使用“加总”逻辑 (e.g., "phq-9")
-        total_score = await _calculate_sum_score(options_from_db)
+    # [策略 B] HPLP (你缺失的逻辑就在这里！)
+    elif db_test.test_type == "hpls": 
+        total_score, _, dimensions_to_add = \
+            await _calculate_hplp_results(db, test_id, options_from_db)
         
-        # “加总”的结果查询是范围匹配
+        # 查询总分规则
         stmt_result = select(TestResult).where(
             TestResult.test_id == test_id,
             TestResult.min_score <= total_score,
-            (TestResult.max_score >= total_score) | (TestResult.max_score.is_(None))
+            (TestResult.max_score >= total_score) | (TestResult.max_score.is_(None)),
+            TestResult.dimension_code.is_(None) 
+        )
+        
+    # [策略 C] 默认加总
+    else: 
+        total_score = await _calculate_sum_score(options_from_db)
+        stmt_result = select(TestResult).where(
+            TestResult.test_id == test_id,
+            TestResult.min_score <= total_score,
+            (TestResult.max_score >= total_score) | (TestResult.max_score.is_(None)),
+            TestResult.dimension_code.is_(None)
         )
         result_text = "未定义的结果范围"
 
-    # --- 4. [通用] 匹配结果 ---
-    
-    final_result_model = None
+    # --- 4. 匹配总结果 ---
     if stmt_result is not None:
         result_obj = await db.execute(stmt_result)
         final_result_model = result_obj.scalars().first()
-
-    if final_result_model:
-        # [重要] 
-        # PHQ-9 会得到: "轻度抑郁"
-        # MBTI 会得到: "ISTJ" (或者你定义的 "学者型 - ISTJ")
-        result_text = final_result_model.result_range
-        # 你也可以选择返回 description:
-        # result_text = final_result_model.description 
+        if final_result_model:
+            if final_result_model.description:
+                result_text = f"{final_result_model.result_range}<SEP>{final_result_model.description}"
+            else:
+                result_text = final_result_model.result_range
         
-    # --- 5. [通用] 保存 Session 和 Answers ---
-
+    # --- 5. 保存到数据库 ---
     db_session = TestSession(
         user_id=submission.user_id,
         test_id=test_id,
-        result=result_text, # 存储 "ISTJ" 或 "轻度抑郁"
-        total_score=total_score # 存储 2111 或 15
+        result=result_text,       
+        total_score=total_score   
     )
     
-    # 关联所有 UserAnswer 对象
     db_session.answers = db_answers_to_create
+    
+    # [关键] 将计算出的维度添加到会话中
+    if dimensions_to_add:
+        db_session.dimensions = dimensions_to_add
 
     db.add(db_session)
     
-    # --- 6. [通用] 返回完整的 Session 结果 ---
+    # --- 6. 返回结果 ---
     await db.flush()
     await db.refresh(db_session)
-    await db.refresh(db_session, attribute_names=["answers"])
+    await db.refresh(db_session, attribute_names=["answers", "dimensions"])
 
     return db_session

@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Text, ForeignKey, TIMESTAMP,
-    UniqueConstraint
+    UniqueConstraint, Index 
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -17,13 +17,9 @@ class Test(Base):
     description = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    # 关系: 一个 Test 有多个 Question
     questions = relationship("Question", back_populates="test", cascade="all, delete-orphan")
-    # 关系: 一个 Test 有多个 Result Range
     results = relationship("TestResult", back_populates="test", cascade="all, delete-orphan")
-    # 关系: 一个 Test 有多个 Session
     sessions = relationship("TestSession", back_populates="test")
-
 
 # ---------------------------------------------------------------
 # Table: questions
@@ -34,15 +30,10 @@ class Question(Base):
     test_id = Column(Integer, ForeignKey("tests.id", ondelete="CASCADE"), nullable=False)
     text = Column(Text, nullable=False)
     order_index = Column(Integer, nullable=False)
-    # score = Column(Integer, nullable=False)
 
-    # 关系: 属于哪个 Test
     test = relationship("Test", back_populates="questions")
-    # 关系: 一个 Question 有多个 Option
     options = relationship("QuestionOption", back_populates="question", cascade="all, delete-orphan")
-    # 关系: 多个 UserAnswer 引用此 Question
     user_answers = relationship("UserAnswer", back_populates="question")
-
 
 # ---------------------------------------------------------------
 # Table: question_options
@@ -54,11 +45,8 @@ class QuestionOption(Base):
     text = Column(String(255), nullable=False)
     score = Column(Integer, nullable=False)
 
-    # 关系: 属于哪个 Question
     question = relationship("Question", back_populates="options")
-    # 关系: 多个 UserAnswer 引用此 Option
     user_answers = relationship("UserAnswer", back_populates="selected_option")
-
 
 # ---------------------------------------------------------------
 # Table: test_results
@@ -68,13 +56,14 @@ class TestResult(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     test_id = Column(Integer, ForeignKey("tests.id", ondelete="CASCADE"), nullable=False)
     min_score = Column(Integer, nullable=False)
-    max_score = Column(Integer)  # 可以为 NULL
+    max_score = Column(Integer)
     result_range = Column(String(255), nullable=False)
     description = Column(Text)
+    
+    # [新增] 维度代码，用于区分是总分规则(NULL)还是维度规则(如 "HR")
+    dimension_code = Column(String(255), nullable=True, index=True)
 
-    # 关系: 属于哪个 Test
     test = relationship("Test", back_populates="results")
-
 
 # ---------------------------------------------------------------
 # Table: test_sessions
@@ -82,17 +71,21 @@ class TestResult(Base):
 class TestSession(Base):
     __tablename__ = "test_sessions"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String(255), nullable=False, index=True) # 假设 user_id 是一个外部ID，加索引
+    user_id = Column(String(255), nullable=False, index=True)
     test_id = Column(Integer, ForeignKey("tests.id"), nullable=False)
     result = Column(String(255), nullable=False)
     total_score = Column(Integer, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    # 关系: 属于哪个 Test
     test = relationship("Test", back_populates="sessions")
-    # 关系: 一个 Session 有多个 UserAnswer
     answers = relationship("UserAnswer", back_populates="session", cascade="all, delete-orphan")
-
+    
+    # [新增] 关联维度结果表
+    dimensions = relationship(
+        "TestSessionDimension", 
+        back_populates="session", 
+        cascade="all, delete-orphan"
+    )
 
 # ---------------------------------------------------------------
 # Table: user_answers
@@ -104,9 +97,24 @@ class UserAnswer(Base):
     question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
     selected_option_id = Column(Integer, ForeignKey("question_options.id"), nullable=False)
 
-    # 关系: 属于哪个 Session
     session = relationship("TestSession", back_populates="answers")
-    # 关系: 对应的 Question
     question = relationship("Question", back_populates="user_answers")
-    # 关系: 对应的 Option
     selected_option = relationship("QuestionOption", back_populates="user_answers")
+
+# ---------------------------------------------------------------
+# [新增] Table: test_session_dimensions
+# ---------------------------------------------------------------
+class TestSessionDimension(Base):
+    __tablename__ = "test_session_dimensions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("test_sessions.id", ondelete="CASCADE"), nullable=False)
+    dimension_code = Column(String(10), nullable=False)
+    score = Column(Integer, nullable=False)
+    result_range = Column(String(255), nullable=False)
+
+    session = relationship("TestSession", back_populates="dimensions")
+    
+    __table_args__ = (
+        Index('idx_session_dimension', 'session_id', 'dimension_code'),
+    )
