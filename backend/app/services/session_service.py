@@ -26,6 +26,76 @@ HPLP_DIMENSION_MAP: Dict[int, str] = {
 }
 
 # ---------------------------------------------------------------
+# [计分地图] MPS 多维完美主义问卷
+# ---------------------------------------------------------------
+MPS_DIMENSION_MAP: Dict[int, List[str]] = {
+    # SOP: 自我完美主义 (也属于 HST)
+    2: ["SOP", "HST"], 4: ["SOP", "HST"], 14: ["SOP", "HST"], 15: ["SOP", "HST"], 26: ["SOP", "HST"],
+    # OOP: 他人完美主义 (也属于 HST)
+    10: ["OOP", "HST"], 11: ["OOP", "HST"], 12: ["OOP", "HST"], 19: ["OOP", "HST"], 24: ["OOP", "HST"],
+    # SPP: 社会完美主义 (也属于 HST)
+    1: ["SPP", "HST"], 6: ["SPP", "HST"], 21: ["SPP", "HST"], 25: ["SPP", "HST"], 29: ["SPP", "HST"],
+    # EMO: 情绪 (也属于 ADT)
+    3: ["EMO", "ADT"], 5: ["EMO", "ADT"], 7: ["EMO", "ADT"], 9: ["EMO", "ADT"], 13: ["EMO", "ADT"], 
+    17: ["EMO", "ADT"], 22: ["EMO", "ADT"], 23: ["EMO", "ADT"], 28: ["EMO", "ADT"],
+    # CB: 认知行为 (也属于 ADT)
+    8: ["CB", "ADT"], 16: ["CB", "ADT"], 18: ["CB", "ADT"], 20: ["CB", "ADT"], 27: ["CB", "ADT"]
+}
+
+# ---------------------------------------------------------------
+# [新增] MPS 专属计分函数
+# ---------------------------------------------------------------
+async def _calculate_mps_results(
+    db: AsyncSession, 
+    test_id: int,
+    options_from_db: List[QuestionOption]
+) -> Tuple[int, str, List[TestSessionDimension]]:
+    """
+    专门为“多维完美主义问卷”(MPS) 计分。
+    包含 5 个基础维度和 2 个汇总分量表（HST, ADT）。
+    """
+    # 1. 初始化分数 (7个维度代码)
+    dim_scores: Dict[str, int] = {
+        "SOP": 0, "OOP": 0, "SPP": 0, "EMO": 0, "CB": 0, "HST": 0, "ADT": 0
+    }
+    total_score = 0
+    
+    # 2. 累加计分
+    for opt in options_from_db:
+        q_index = opt.question.order_index
+        score = opt.score
+        total_score += score
+        
+        # 一个题目可能对应多个维度代码（如 2号题既是 SOP 也是 HST）
+        target_codes = MPS_DIMENSION_MAP.get(q_index, [])
+        for code in target_codes:
+            dim_scores[code] += score
+            
+    # 3. 加载规则并匹配 (逻辑与 HPLP 一致)
+    stmt_rules = select(TestResult).where(
+        TestResult.test_id == test_id,
+        TestResult.dimension_code.isnot(None)
+    )
+    result_rules = await db.execute(stmt_rules)
+    dimension_rules = result_rules.scalars().all()
+
+    dimensions_to_create: List[TestSessionDimension] = []
+    
+    for dim_code, score in dim_scores.items():
+        found_rule_text = f"分数: {score}"
+        for rule in dimension_rules:
+            if rule.dimension_code == dim_code:
+                if (rule.min_score <= score and (rule.max_score is None or rule.max_score >= score)):
+                    found_rule_text = f"{rule.result_range}<SEP>{rule.description}" if rule.description else rule.result_range
+                    break
+        
+        dimensions_to_create.append(
+            TestSessionDimension(dimension_code=dim_code, score=score, result_range=found_rule_text)
+        )
+
+    return total_score, "Processing...", dimensions_to_create
+
+# ---------------------------------------------------------------
 # [新增] HPLP 专属计分函数
 # ---------------------------------------------------------------
 async def _calculate_hplp_results(
@@ -188,6 +258,18 @@ async def calculate_and_save_session(
             TestResult.min_score <= total_score,
             (TestResult.max_score >= total_score) | (TestResult.max_score.is_(None)),
             TestResult.dimension_code.is_(None) 
+        )
+
+    # --- [新增] MPS 分发逻辑 ---
+    elif db_test.test_type == "mps":
+        total_score, _, dimensions_to_add = await _calculate_mps_results(db, test_id, options_from_db)
+        # MPS 没有总分结果，我们取高标准总分 (HST) 作为展示主结果
+        hst_score = next((d.score for d in dimensions_to_add if d.dimension_code == "HST"), 0)
+        stmt_result = select(TestResult).where(
+            TestResult.test_id == test_id,
+            TestResult.dimension_code == "HST", # 以高标准倾向作为主标题
+            TestResult.min_score <= hst_score,
+            (TestResult.max_score >= hst_score) | (TestResult.max_score.is_(None))
         )
         
     # [策略 C] 默认加总

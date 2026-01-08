@@ -101,4 +101,16 @@ export const tests: Test[] = [
     path: "/test/hpls",
     color: "from-green-500 to-emerald-500"
   },
+  // 在 tests 数组中添加（或者替换之前的 mps 配置）：
+  {
+    id: "mps",
+    title: "多维完美主义问卷 (MPS)",
+    description: "测量完美主义倾向及其适应性，深入了解你的高标准与内心感受。",
+    icon: Target,  // 确保你在文件头部引入了 Target 图标
+    questionsCount: 29,
+    estimatedTime: "5-10分钟",
+    category: "性格分析", // 或者 "心理健康"
+    path: "/test/mps",
+    color: "from-purple-500 to-indigo-500" // 渐变色风格，与 hpls 保持一致
+  },
 ];
