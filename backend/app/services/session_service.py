@@ -43,6 +43,41 @@ MPS_DIMENSION_MAP: Dict[int, List[str]] = {
 }
 
 # ---------------------------------------------------------------
+# [计分地图] IPVS 亲密关系PUA受害问卷
+# ---------------------------------------------------------------
+IPVS_DIMENSION_MAP: Dict[int, str] = {
+    1: "power", 2: "power", 3: "power", 4: "power",
+    5: "emotional", 6: "emotional", 7: "emotional", 8: "emotional", 9: "emotional", 10: "emotional", 11: "emotional",
+    12: "value", 13: "value", 14: "value", 15: "value"
+}
+
+# 2. IPVS计分函数
+async def _calculate_ipvs_results(db: AsyncSession, test_id: int, options_from_db: List[QuestionOption]):
+    dim_scores = {"power": 0, "emotional": 0, "value": 0}
+    total_score = 0
+    for opt in options_from_db:
+        total_score += opt.score
+        d_code = IPVS_DIMENSION_MAP.get(opt.question.order_index)
+        if d_code: dim_scores[d_code] += opt.score
+    
+    # 加载规则
+    stmt_rules = select(TestResult).where(TestResult.test_id == test_id, TestResult.dimension_code.isnot(None))
+    result_rules = await db.execute(stmt_rules)
+    dimension_rules = result_rules.scalars().all()
+
+    dims_to_create = []
+    for d_code, score in dim_scores.items():
+        found_text = f"分数: {score}"
+        for rule in dimension_rules:
+            if rule.dimension_code == d_code:
+                if rule.min_score <= score and (rule.max_score is None or rule.max_score >= score):
+                    found_text = f"{rule.result_range}<SEP>{rule.description}" if rule.description else rule.result_range
+                    break
+        dims_to_create.append(TestSessionDimension(dimension_code=d_code, score=score, result_range=found_text))
+
+    return total_score, "Processing...", dims_to_create
+
+# ---------------------------------------------------------------
 # [新增] MPS 专属计分函数
 # ---------------------------------------------------------------
 async def _calculate_mps_results(
@@ -270,6 +305,16 @@ async def calculate_and_save_session(
             TestResult.dimension_code == "HST", # 以高标准倾向作为主标题
             TestResult.min_score <= hst_score,
             (TestResult.max_score >= hst_score) | (TestResult.max_score.is_(None))
+        )
+
+    # --- IPVS 分发逻辑 ---
+    elif db_test.test_type == "ipvs":
+        total_score, _, dimensions_to_add = await _calculate_ipvs_results(db, test_id, options_from_db)
+        stmt_result = select(TestResult).where(
+            TestResult.test_id == test_id,
+            TestResult.min_score <= total_score,
+            (TestResult.max_score >= total_score) | (TestResult.max_score.is_(None)),
+            TestResult.dimension_code.is_(None)
         )
         
     # [策略 C] 默认加总

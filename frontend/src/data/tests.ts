@@ -1,4 +1,4 @@
-import { Brain, Heart, Smile, Zap, Target, Users, HeartHandshake, HeartPulse } from "lucide-react";
+import { Brain, Heart, Smile, Zap, Target, Users, HeartHandshake, HeartPulse, ShieldAlert } from "lucide-react";
 
 export interface Test {
   id: string;
@@ -112,5 +112,16 @@ export const tests: Test[] = [
     category: "性格分析", // 或者 "心理健康"
     path: "/test/mps",
     color: "from-purple-500 to-indigo-500" // 渐变色风格，与 hpls 保持一致
+  },
+  {
+    id: "ipvs",
+    title: "亲密关系 PUA 受害量表",
+    description: "评估亲密关系中的权力操纵、情感勒索与价值否定情形，守护自我边界。",
+    icon: ShieldAlert,
+    questionsCount: 15,
+    estimatedTime: "3-5分钟",
+    category: "亲密关系",
+    path: "/test/ipvs",
+    color: "from-red-500 to-rose-500"
   },
 ];

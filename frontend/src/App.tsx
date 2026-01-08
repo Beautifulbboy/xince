@@ -14,6 +14,7 @@ import CoupleRelationshipTest from "./pages/CoupleRelationshipTest";
 import BeckHopelessnessTest from "./pages/BeckHopelessnessTest";
 import HealthPromotingLifestyleTest from "./pages/HealthPromotingLifestyleTest";
 import MPSTest from "./pages/MPSTest";
+import IpvsTest from "./pages/IpvsTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/test/beck-hopelessness" element={<BeckHopelessnessTest />} />
           <Route path="/test/hpls" element={<HealthPromotingLifestyleTest />} />
           <Route path="/test/mps" element={<MPSTest />} />
+          <Route path="/test/ipvs" element={<IpvsTest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
